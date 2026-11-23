@@ -127,7 +127,31 @@ input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 4px rgba(2
       <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="Enter Your Contact Number" autocomplete="tel-national" aria-label="Contact number" required>
     </div><div class="err" id="e_phone"></div>
   </fieldset>
+<div class="field">
+    <label class="l" for="blood">Blood Group:</label>
+    <select id="blood" name="bloodGroup" required>
+      <option value="" disabled selected>Choose Your Blood Group</option>
+    </select>
+    <div class="err" id="e_blood"></div>
+  </div>
 
+  <fieldset class="field" id="emgContact">
+    <legend class="legend">Emergency Contact Number:</legend>
+    <div class="row r-phone">
+      <select id="emgCc" name="emergencyCountryCode" aria-label="Emergency country code" required>
+        <option value="" disabled>Country Code</option>
+      </select>
+      <input id="emgPhone" name="emergencyPhone" type="tel" inputmode="tel" placeholder="Enter Emergency Contact Number" autocomplete="tel-national" aria-label="Emergency contact number" required>
+    </div>
+    <div class="err" id="e_emgPhone"></div>
+  </fieldset>
+
+  <div class="field">
+    <label class="l" for="emgRel">Relation with Emergency Contact:</label>
+    <input id="emgRel" name="emergencyRelation" type="text" placeholder="e.g., Father, Mother, Guardian, Sibling" required>
+    <div class="err" id="e_emgRel"></div>
+  </div>
+  
   <div class="field"><label class="l" for="addr">Present Address:</label><input id="addr" name="address" type="text" placeholder="Enter Your Full Address" autocomplete="street-address" required><div class="err" id="e_addr"></div></div>
 
   <div class="row r-dept">
