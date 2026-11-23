@@ -91,7 +91,9 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--ink);outline-offset
       await sendPasswordResetEmail(auth, email);
       showInfo('Password reset link sent! Check your inbox and spam folder.');
     } catch (err) {
-      showErr('Could not send reset email. Check that the email address is valid.');
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+      showErr(`${err.code}: ${err.message}`);
     }
   });
 
