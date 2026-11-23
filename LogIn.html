@@ -159,7 +159,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--ink);outline-offset
     } catch (err) {
       btn.disabled = false;
       btn.textContent = 'Sign In';
-      showErr('Invalid email or password.');
+      showErr(`${err.code}: ${err.message}`);
     }
   });
 </script>
