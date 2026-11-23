@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
 :root{--orange:#f0801f;--orange-soft:#f6b57c;--red:#ff3b30;--ink:#1f2937;color-scheme:light}
 *{box-sizing:border-box}
@@ -76,7 +77,9 @@ input[aria-invalid="true"]{border-color:#c62828}
       <label id="hl">Confirm You are Human</label>
       <!-- reCAPTCHA goes here: replace the placeholder text with your captcha widget
            (e.g. <div class="g-recaptcha" data-sitekey="YOUR_SITE_KEY"></div>) and load its script. -->
-      <div class="captcha" id="captcha" role="group" aria-labelledby="hl">Re-captcha Placeholder</div>
+      <div class="captcha" id="captcha" role="group" aria-labelledby="hl">
+  <div class="cf-turnstile" data-sitekey="0x4AAAAAAGPbCK4YciEbqwnX" data-theme="light"></div>
+</div>
       <div class="err" id="ec"></div>
     </div>
 
@@ -93,35 +96,136 @@ input[aria-invalid="true"]{border-color:#c62828}
   <div class="note" id="note" role="status"></div>
 </main>
 
-<script>
-(function () {
-  var WAIT_SECONDS = 300;            /* change this number to change the wait time */
-  var left = WAIT_SECONDS, t = null;
-  var count = document.getElementById('count'), resend = document.getElementById('resend'), note = document.getElementById('note');
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBWsBJ1Hi9cqE2RMtmEF_NHQvjJktFiii4",
+    authDomain: "uiudc-website.firebaseapp.com",
+    projectId: "uiudc-website",
+    storageBucket: "uiudc-website.firebasestorage.app",
+    messagingSenderId: "680858269973",
+    appId: "1:680858269973:web:bc39098d2c9674fd6f911c",
+    measurementId: "G-S3WJ16QZY7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // Ensure the user came from signup.html (or is logged in)
+  let currentUser = null;
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = 'signup.html';
+    } else {
+      currentUser = user;
+    }
+  });
+
+  // 1. Resend Timer Logic
+  const WAIT_SECONDS = 300;
+  let left = WAIT_SECONDS, t = null;
+  const count = document.getElementById('count');
+  const resend = document.getElementById('resend');
+  const note = document.getElementById('note');
+
   function tick() {
     count.textContent = left;
     resend.disabled = left > 0;
-    if (left > 0) { left--; t = setTimeout(tick, 1000); } else { t = null; }
+    if (left > 0) {
+      left--;
+      t = setTimeout(tick, 1000);
+    } else {
+      t = null;
+    }
   }
-  function startTimer() { clearTimeout(t); left = WAIT_SECONDS; tick(); }
-  resend.addEventListener('click', function () {
-    /* TODO: ask your server to send a new OTP to the user's email here. */
-    note.textContent = 'A new OTP has been requested. Please check your email.';
-    startTimer();
-  });
+  function startTimer() {
+    clearTimeout(t);
+    left = WAIT_SECONDS;
+    tick();
+  }
   startTimer();
 
-  document.getElementById('f').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var o = document.getElementById('otp'), v = o.value.trim(), err = document.getElementById('eo');
-    var ok = /^\d{4,8}$/.test(v);
-    err.textContent = ok ? '' : 'Please enter the numeric OTP sent to your email.';
-    o.setAttribute('aria-invalid', ok ? 'false' : 'true');
-    if (!ok) return;
-    /* TODO: verify the OTP and the captcha on your server, then continue. */
-    location.href = 'info_form.html';
+  // Request a new OTP
+  resend.addEventListener('click', async () => {
+    if (!currentUser) return;
+    resend.disabled = true;
+    note.textContent = 'Sending a new OTP...';
+
+    try {
+      const idToken = await currentUser.getIdToken();
+      const res = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          username: currentUser.displayName || 'Member',
+          email: currentUser.email
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to resend OTP.');
+      note.textContent = 'A new OTP has been sent. Please check your email.';
+      startTimer();
+    } catch (err) {
+      note.textContent = err.message;
+      resend.disabled = false;
+    }
   });
-})();
+
+  // 2. Form Submit: Verify OTP + Cloudflare Turnstile
+  const form = document.getElementById('f');
+  const btn = form.querySelector('.confirm');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const o = document.getElementById('otp');
+    const v = o.value.trim();
+    const errOtp = document.getElementById('eo');
+    const errCap = document.getElementById('ec');
+
+    // Read token automatically injected by Cloudflare Turnstile
+    const turnstileInput = document.querySelector('[name="cf-turnstile-response"]');
+    const turnstileToken = turnstileInput ? turnstileInput.value : '';
+
+    const okOtp = /^\d{6}$/.test(v);
+    errOtp.textContent = okOtp ? '' : 'Please enter the 6-digit numeric OTP sent to your email.';
+    o.setAttribute('aria-invalid', okOtp ? 'false' : 'true');
+
+    errCap.textContent = turnstileToken ? '' : 'Please complete the human verification check.';
+
+    if (!okOtp || !turnstileToken || !currentUser) return;
+
+    btn.disabled = true;
+    btn.textContent = 'VERIFYING...';
+
+    try {
+      const idToken = await currentUser.getIdToken();
+      const res = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ otp: v, turnstileToken })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed.');
+
+      // Success -> proceed to Step 3 (info_form.html)
+      window.location.href = 'info_form.html';
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'CONFIRM';
+      errOtp.textContent = err.message;
+      // Reset Turnstile widget so user can try again
+      if (window.turnstile) window.turnstile.reset();
+    }
+  });
 </script>
 </body>
 </html>
