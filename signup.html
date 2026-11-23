@@ -85,6 +85,85 @@ input[aria-invalid="true"]{border-color:#c62828}
     window.location.href = 'eauth.html';
   });
 })();
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+  // Paste your Web App config from Firebase Console -> Project Settings
+  const firebaseConfig = {
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const f = document.getElementById('f');
+  const btn = f.querySelector('.confirm');
+  const $(id) => document.getElementById(id);
+
+  function check(inp, errEl, msg) {
+    errEl.textContent = msg || '';
+    inp.setAttribute('aria-invalid', msg ? 'true' : 'false');
+    return !msg;
+  }
+
+  f.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const u = $('u').value.trim();
+    const e = $('e').value.trim();
+    const p = $('p').value;
+    const c = $('c').value;
+
+    let ok = true;
+    ok = check($('u'), $('eu'), u ? '' : 'Please enter a username.') && ok;
+    // Tip: If you want to restrict to UIU emails only, check e.endsWith('@bscse.uiu.ac.bd') or '.uiu.ac.bd'
+    ok = check($('e'), $('ee'), /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) ? '' : 'Please enter a valid email address.') && ok;
+    ok = check($('p'), $('ep'), p.length >= 8 ? '' : 'Password must be at least 8 characters.') && ok;
+    ok = check($('c'), $('ec'), c === p && c ? '' : 'Passwords do not match.') && ok;
+    if (!ok) return;
+
+    btn.disabled = true;
+    btn.textContent = 'CREATING ACCOUNT...';
+
+    try {
+      // 1. Create account in Firebase Auth
+      const cred = await createUserWithEmailAndPassword(auth, e, p);
+      await updateProfile(cred.user, { displayName: u });
+
+      // 2. Get fresh 1-hour ID token and send OTP via Vercel backend
+      const idToken = await cred.user.getIdToken();
+      const res = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ username: u, email: e })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to send verification OTP.');
+      }
+
+      // 3. Proceed to Step 2 (eauth.html)
+      $('ok').style.display = 'block';
+      window.location.href = 'eauth.html';
+
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'CONFIRM';
+
+      if (err.code === 'auth/email-already-in-use') {
+        check($('e'), $('ee'), 'This email is already registered. Please log in.');
+      } else {
+        check($('e'), $('ee'), err.message);
+      }
+    }
+  });
 </script>
 </body>
 </html>
