@@ -198,58 +198,190 @@ input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 4px rgba(2
 </form>
 </main>
 
-<script>
-/* ---- Lists you can edit: add/remove/reorder items freely ---- */
-var DEPARTMENTS = ["Computer Science and Engineering (CSE)","Electrical and Electronic Engineering (EEE)","Civil Engineering","Data Science (BSDS)","Business Administration (BBA)","Economics","English","Media Studies and Journalism","Pharmacy","Biotechnology and Genetic Engineering","Other"];
-var COUNTRY_CODES = [["+880","Bangladesh (+880)"],["+91","India (+91)"],["+92","Pakistan (+92)"],["+977","Nepal (+977)"],["+94","Sri Lanka (+94)"],["+60","Malaysia (+60)"],["+65","Singapore (+65)"],["+971","UAE (+971)"],["+966","Saudi Arabia (+966)"],["+974","Qatar (+974)"],["+44","UK (+44)"],["+1","USA / Canada (+1)"],["+61","Australia (+61)"]];
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
 
-(function () {
-  function $(id) { return document.getElementById(id); }
-  function opt(v, t, sel) { var o = document.createElement('option'); o.value = v; o.textContent = t; if (sel) o.selected = true; return o; }
-  var d = $('day'), m = $('month'), y = $('year'), cc = $('cc'), dept = $('dept');
-  for (var i = 1; i <= 31; i++) d.appendChild(opt(i, i));
-  ['January','February','March','April','May','June','July','August','September','October','November','December'].forEach(function (n, k) { m.appendChild(opt(k + 1, n)); });
-  var now = new Date().getFullYear();
-  for (var yr = now - 14; yr >= now - 50; yr--) y.appendChild(opt(yr, yr));
-  COUNTRY_CODES.forEach(function (c) { cc.appendChild(opt(c[0], c[1], c[0] === '+880')); });
-  DEPARTMENTS.forEach(function (n) { dept.appendChild(opt(n, n)); });
+  const firebaseConfig = {
+    apiKey: "AIzaSyBWsBJ1Hi9cqE2RMtmEF_NHQvjJktFiii4",
+    authDomain: "uiudc-website.firebaseapp.com",
+    projectId: "uiudc-website",
+    storageBucket: "uiudc-website.firebasestorage.app",
+    messagingSenderId: "680858269973",
+    appId: "1:680858269973:web:bc39098d2c9674fd6f911c",
+    measurementId: "G-S3WJ16QZY7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  let currentUser = null;
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = 'signup.html';
+    } else {
+      currentUser = user;
+      const uemailInput = document.getElementById('uemail');
+      if (uemailInput && !uemailInput.value && user.email) {
+        uemailInput.value = user.email;
+      }
+    }
+  });
+
+  /* ---- Dropdown Lists ---- */
+  const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+  const DEPARTMENTS = [
+    "Computer Science and Engineering (CSE)",
+    "Electrical and Electronic Engineering (EEE)",
+    "Civil Engineering",
+    "Data Science (BSDS)",
+    "Business Administration (BBA)",
+    "Economics",
+    "English",
+    "Media Studies and Journalism",
+    "Pharmacy",
+    "Biotechnology and Genetic Engineering",
+    "Other"
+  ];
+  const COUNTRY_CODES = [
+    ["+880","Bangladesh (+880)"],["+91","India (+91)"],["+92","Pakistan (+92)"],
+    ["+977","Nepal (+977)"],["+94","Sri Lanka (+94)"],["+60","Malaysia (+60)"],
+    ["+65","Singapore (+65)"],["+971","UAE (+971)"],["+966","Saudi Arabia (+966)"],
+    ["+974","Qatar (+974)"],["+44","UK (+44)"],["+1","USA / Canada (+1)"],
+    ["+61","Australia (+61)"]
+  ];
+
+  const $(id) => document.getElementById(id);
+  function opt(v, t, sel) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = t;
+    if (sel) o.selected = true;
+    return o;
+  }
+
+  const d = $('day'), m = $('month'), y = $('year'), cc = $('cc'), emgCc = $('emgCc'), blood = $('blood'), dept = $('dept');
+  for (let i = 1; i <= 31; i++) d.appendChild(opt(i, i));
+  ['January','February','March','April','May','June','July','August','September','October','November','December']
+    .forEach((n, k) => m.appendChild(opt(k + 1, n)));
+  const now = new Date().getFullYear();
+  for (let yr = now - 14; yr >= now - 50; yr--) y.appendChild(opt(yr, yr));
+  COUNTRY_CODES.forEach((c) => {
+    cc.appendChild(opt(c[0], c[1], c[0] === '+880'));
+    emgCc.appendChild(opt(c[0], c[1], c[0] === '+880'));
+  });
+  BLOOD_GROUPS.forEach((bg) => blood.appendChild(opt(bg, bg)));
+  DEPARTMENTS.forEach((n) => dept.appendChild(opt(n, n)));
 
   function setErr(id, inputs, msg) {
     $(id).textContent = msg || '';
-    inputs.forEach(function (el) { if (msg) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid'); });
+    inputs.forEach((el) => {
+      if (msg) el.setAttribute('aria-invalid', 'true');
+      else el.removeAttribute('aria-invalid');
+    });
     return !msg;
   }
-  function groupChecked(name) { return !!document.querySelector('input[name="' + name + '"]:checked'); }
+  function groupChecked(name) {
+    return !!document.querySelector('input[name="' + name + '"]:checked');
+  }
+  function checkedValues(name) {
+    return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked'))
+      .map((el) => el.value)
+      .join(', ');
+  }
 
-  $('f').addEventListener('submit', function (e) {
+  const form = $('f');
+  const btn = form.querySelector('.next');
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    var first = null;
+    let first = null;
     function note(ok, el) { if (!ok && !first) first = el; return ok; }
-    var ok = true;
+    let ok = true;
+
     function req(id, errId, msg, test) {
-      var el = $(id), v = el.value.trim(), good = test ? test(v) : !!v;
+      const el = $(id), v = el.value.trim(), good = test ? test(v) : !!v;
       ok = note(setErr(errId, [el], good ? '' : msg), el) && ok;
     }
+
     req('name', 'e_name', 'Please enter your full name.');
-    var dobOk = d.value && m.value && y.value;
-    ok = note(setErr('e_dob', [d, m, y].filter(function (x) { return !x.value; }), dobOk ? '' : 'Please select your full date of birth.'), d) && ok;
+    const dobOk = d.value && m.value && y.value;
+    ok = note(setErr('e_dob', [d, m, y].filter((x) => !x.value), dobOk ? '' : 'Please select your full date of birth.'), d) && ok;
     ok = note(setErr('e_gender', [], groupChecked('gender') ? '' : 'Please select your gender.'), document.querySelector('input[name=gender]')) && ok;
-    req('phone', 'e_phone', 'Please enter a valid contact number.', function (v) { return /^[0-9 \-]{6,15}$/.test(v); });
+    req('phone', 'e_phone', 'Please enter a valid contact number.', (v) => /^[0-9 \-]{6,15}$/.test(v));
+    req('blood', 'e_blood', 'Please select your blood group.');
+    req('emgPhone', 'e_emgPhone', 'Please enter a valid emergency contact number.', (v) => /^[0-9 \-]{6,15}$/.test(v));
+    req('emgRel', 'e_emgRel', 'Please enter your relation with the emergency contact.');
     req('addr', 'e_addr', 'Please enter your present address.');
     req('dept', 'e_dept', 'Please choose your department.');
     req('batch', 'e_batch', 'Please enter your batch.');
     req('uid', 'e_uid', 'Please enter your university ID.');
-    req('uemail', 'e_uemail', 'Please enter a valid email address.', function (v) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v); });
-    ['debated','training','competition','eca','ecaInvolved','ecaPosition'].forEach(function (g) {
+    req('uemail', 'e_uemail', 'Please enter a valid email address.', (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v));
+
+    ['debated','training','competition','eca','ecaInvolved','ecaPosition'].forEach((g) => {
       ok = note(setErr('e_' + g, [], groupChecked(g) ? '' : 'Please choose Yes or No.'), document.querySelector('input[name=' + g + ']')) && ok;
     });
+
     $('formerr').style.display = ok ? 'none' : 'block';
-    if (!ok) { if (first && first.scrollIntoView) first.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (first && first.focus) first.focus({ preventScroll: true }); return; }
-    var data = new FormData($('f'));
-    /* TODO: send `data` (all fields above) to your server / database here. */
-    window.location.href = 'payment.html';
+    if (!ok) {
+      if (first && first.scrollIntoView) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (first && first.focus) first.focus({ preventScroll: true });
+      return;
+    }
+
+    if (!currentUser) return;
+    btn.disabled = true;
+    btn.textContent = 'SAVING...';
+
+    const payload = {
+      fullName: $('name').value.trim(),
+      dob: `${y.value}-${String(m.value).padStart(2, '0')}-${String(d.value).padStart(2, '0')}`,
+      gender: document.querySelector('input[name="gender"]:checked').value,
+      phone: `${cc.value} ${$('phone').value.trim()}`,
+      bloodGroup: blood.value,
+      emergencyPhone: `${emgCc.value} ${$('emgPhone').value.trim()}`,
+      emergencyRelation: $('emgRel').value.trim(),
+      address: $('addr').value.trim(),
+      department: dept.value,
+      batch: $('batch').value.trim(),
+      universityId: $('uid').value.trim(),
+      universityEmail: $('uemail').value.trim(),
+      debated: document.querySelector('input[name="debated"]:checked').value,
+      training: document.querySelector('input[name="training"]:checked').value,
+      competition: document.querySelector('input[name="competition"]:checked').value,
+      pastDebatingExperience: $('pastDebate').value.trim(),
+      debatingAchievements: $('achv').value.trim(),
+      eca: document.querySelector('input[name="eca"]:checked').value,
+      ecaInvolved: document.querySelector('input[name="ecaInvolved"]:checked').value,
+      ecaPosition: document.querySelector('input[name="ecaPosition"]:checked').value,
+      pastEca: $('pastEca').value.trim(),
+      joinDepartments: checkedValues('joinDepartments'),
+      skills: checkedValues('skills'),
+      devices: checkedValues('devices')
+    };
+
+    try {
+      const idToken = await currentUser.getIdToken();
+      const res = await fetch('/api/save-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to save information.');
+
+      $('done').style.display = 'block';
+      window.location.href = 'payment.html';
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'NEXT';
+      $('formerr').textContent = err.message;
+      $('formerr').style.display = 'block';
+    }
   });
-})();
 </script>
 </body>
 </html>
