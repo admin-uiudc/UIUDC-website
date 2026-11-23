@@ -167,37 +167,114 @@ main{max-width:760px}
   </form>
 </main>
 
-<script>
-(function () {
-  function $(id) { return document.getElementById(id); }
-  var trx = $('trx'), label = $('trxLabel');
-  /* label + placeholder follow the chosen payment method */
-  document.querySelectorAll('input[name=method]').forEach(function (r) {
-    r.addEventListener('change', function () {
-      var cash = r.value === 'Cash';
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBWsBJ1Hi9cqE2RMtmEF_NHQvjJktFiii4",
+    authDomain: "uiudc-website.firebaseapp.com",
+    projectId: "uiudc-website",
+    storageBucket: "uiudc-website.firebasestorage.app",
+    messagingSenderId: "680858269973",
+    appId: "1:680858269973:web:bc39098d2c9674fd6f911c",
+    measurementId: "G-S3WJ16QZY7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  let currentUser = null;
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = 'signup.html';
+    } else {
+      currentUser = user;
+    }
+  });
+
+  const $(id) => document.getElementById(id);
+  const trx = $('trx');
+  const label = $('trxLabel');
+
+  /* Label + placeholder follow the chosen payment method */
+  document.querySelectorAll('input[name=method]').forEach((r) => {
+    r.addEventListener('change', () => {
+      const cash = r.value === 'Cash';
       label.innerHTML = cash ? 'Application No.' : 'TRX ID';
       trx.placeholder = cash ? 'Enter Application No.' : 'Enter TRX ID';
       $('e_method').textContent = '';
     });
   });
-  function setErr(id, el, msg) { $(id).textContent = msg || ''; if (el) { if (msg) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid'); } return !msg; }
-  $('f').addEventListener('submit', function (e) {
+
+  function setErr(id, el, msg) {
+    $(id).textContent = msg || '';
+    if (el) {
+      if (msg) el.setAttribute('aria-invalid', 'true');
+      else el.removeAttribute('aria-invalid');
+    }
+    return !msg;
+  }
+
+  const form = $('f');
+  const btn = form.querySelector('.confirm');
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    var ok = true, first = null;
-    function note(g, el) { if (!g && !first) first = el; ok = ok && g; }
-    var m = document.querySelector('input[name=method]:checked');
+    let ok = true;
+    let first = null;
+    function note(g, el) {
+      if (!g && !first) first = el;
+      ok = ok && g;
+    }
+
+    const m = document.querySelector('input[name=method]:checked');
     note(setErr('e_method', null, m ? '' : 'Please choose a payment method.'), document.querySelector('input[name=method]'));
-    var v = trx.value.trim();
+
+    const v = trx.value.trim();
     note(setErr('e_trx', trx, /^[A-Za-z0-9\-_\/]{4,40}$/.test(v) ? '' : 'Please enter a valid ID (letters and numbers only).'), trx);
+
     note(setErr('e_a1', null, $('a1').checked ? '' : 'You must agree to continue.'), $('a1'));
     note(setErr('e_a2', null, $('a2').checked ? '' : 'You must agree to continue.'), $('a2'));
+
     $('bad').style.display = ok ? 'none' : 'block';
-    if (!ok) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); first.focus({ preventScroll: true }); return; }
-    /* TODO: send { method: m.value, reference: v } to your server for payment verification here. */
-    $('good').style.display = 'block';
-    $('good').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!ok) {
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      first.focus({ preventScroll: true });
+      return;
+    }
+
+    if (!currentUser) return;
+    btn.disabled = true;
+    btn.textContent = 'SUBMITTING...';
+
+    try {
+      const idToken = await currentUser.getIdToken();
+      const res = await fetch('/api/save-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          method: m.value,
+          reference: v
+        })
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to submit payment details.');
+
+      btn.textContent = 'SUBMITTED';
+      $('good').style.display = 'block';
+      $('good').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'CONFIRM';
+      $('bad').textContent = err.message;
+      $('bad').style.display = 'block';
+    }
   });
-})();
 </script>
 </body>
 </html>
