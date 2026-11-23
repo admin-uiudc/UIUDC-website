@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Dashboard | UIU Debate Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--orange:#f0801f;--orange-soft:#f6b57c;--ink:#1f2937;--bg:#f9fafb}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;padding:28px 20px 64px}
+  .wrap{max-width:1160px;margin:0 auto}
+  .head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;background:linear-gradient(90deg,#ff3b30 0%,#ff6a3d 55%,#ff9550 100%);color:#fff;padding:22px 28px;border-radius:14px;border:2px solid #111}
+  .head h1{margin:0;font-size:clamp(20px,2.5vw,28px);font-weight:700}
+  .head p{margin:4px 0 0;font-size:14px;opacity:.95}
+  .actions-top{display:flex;gap:10px;align-items:center}
+  .btn-pill{background:#000;color:#fff;border:0;padding:10px 20px;border-radius:999px;font:600 13px Montserrat,sans-serif;cursor:pointer}
+  .btn-pill:hover{opacity:.88}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:22px}
+  .stat{background:#fff;border:2px solid var(--orange);border-radius:14px;padding:18px 22px}
+  .stat .k{font-size:13px;color:#6b7280;font-weight:600}
+  .stat .v{font-size:28px;font-weight:700;color:var(--orange);margin-top:4px}
+  .card{background:#fff;border:2px solid var(--orange);border-radius:16px;padding:22px;margin-top:22px}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+  .search{height:44px;min-width:260px;border:2px solid var(--orange);border-radius:999px;padding:0 18px;font:500 14px Montserrat,sans-serif;color:var(--ink)}
+  .search:focus{outline:none;box-shadow:0 0 0 3px rgba(240,128,31,.25)}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:800px}
+  th,td{padding:12px 14px;text-align:left;border-bottom:1px solid #e5e7eb;font-size:14px}
+  th{color:var(--orange);font-weight:700;background:#fff7ed}
+  .badge{display:inline-block;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:700}
+  .pending{background:#fef3c7;color:#92400e}
+  .verified{background:#d1fae5;color:#065f46}
+  .rejected{background:#fee2e2;color:#991b1b}
+  .btn{border:0;border-radius:999px;padding:8px 15px;font:700 12px Montserrat,sans-serif;cursor:pointer;margin-right:6px}
+  .btn-ok{background:#16a34a;color:#fff}
+  .btn-ok:hover{background:#15803d}
+  .btn-no{background:#dc2626;color:#fff}
+  .btn-no:hover{background:#b91c1c}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  #status{margin-top:16px;font-weight:600;color:var(--orange);min-height:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>UIU Debate Club &mdash; Admin Dashboard</h1>
+      <p>Verify recruitment payments, grant portal access, and send confirmation emails</p>
+    </div>
+    <div class="actions-top">
+      <button class="btn-pill" id="refreshBtn" type="button">Refresh</button>
+      <button class="btn-pill" id="logoutBtn" type="button">Log Out</button>
+    </div>
+  </div>
+
+  <div id="status">Checking admin permissions...</div>
+
+  <div class="stats" id="statsGrid" style="display:none">
+    <div class="stat"><div class="k">Total Submissions</div><div class="v" id="cTotal">0</div></div>
+    <div class="stat"><div class="k">Pending Verification</div><div class="v" id="cPending">0</div></div>
+    <div class="stat"><div class="k">Approved Members</div><div class="v" id="cApproved">0</div></div>
+  </div>
+
+  <div class="card" id="tableCard" style="display:none">
+    <div class="toolbar">
+      <input class="search" id="searchInput" type="search" placeholder="Search by name, ID, email, or TRX...">
+      <select class="search" id="filterSelect" style="min-width:170px">
+        <option value="all">All Statuses</option>
+        <option value="pending_verification">Pending Verification</option>
+        <option value="verified">Verified</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>University ID</th>
+            <th>Email</th>
+            <th>Method</th>
+            <th>TRX / App ID</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBWsBJ1Hi9cqE2RMtmEF_NHQvjJktFiii4",
+    authDomain: "uiudc-website.firebaseapp.com",
+    projectId: "uiudc-website",
+    storageBucket: "uiudc-website.firebasestorage.app",
+    messagingSenderId: "680858269973",
+    appId: "1:680858269973:web:bc39098d2c9674fd6f911c",
+    measurementId: "G-S3WJ16QZY7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const statusEl = document.getElementById('status');
+  const tbody = document.getElementById('tbody');
+  const searchInput = document.getElementById('searchInput');
+  const filterSelect = document.getElementById('filterSelect');
+
+  let adminToken = '';
+  let allUsers = [];
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    signOut(auth).then(() => { window.location.href = 'login.html'; });
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', () => {
+    if (adminToken) loadUsers();
+  });
+
+  searchInput.addEventListener('input', renderTable);
+  filterSelect.addEventListener('change', renderTable);
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = 'login.html';
+      return;
+    }
+    const tokenResult = await user.getIdTokenResult(true);
+    if (tokenResult.claims.admin !== true) {
+      statusEl.textContent = 'Access Denied: Your account does not have admin privileges.';
+      return;
+    }
+    adminToken = tokenResult.token;
+    await loadUsers();
+  });
+
+  async function loadUsers() {
+    statusEl.textContent = 'Loading submitted payments...';
+    const res = await fetch('/api/admin/pending-users', {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      statusEl.textContent = data.error || 'Failed to load applicants.';
+      return;
+    }
+
+    allUsers = data.users || [];
+    const pendingCount = allUsers.filter(u => !u.portalAccess && u.paymentStatus !== 'rejected').length;
+    const approvedCount = allUsers.filter(u => u.portalAccess).length;
+
+    document.getElementById('cTotal').textContent = allUsers.length;
+    document.getElementById('cPending').textContent = pendingCount;
+    document.getElementById('cApproved').textContent = approvedCount;
+
+    document.getElementById('statsGrid').style.display = 'grid';
+    document.getElementById('tableCard').style.display = 'block';
+    statusEl.textContent = `Loaded ${allUsers.length} member payment record(s).`;
+    renderTable();
+  }
+
+  function renderTable() {
+    const q = searchInput.value.trim().toLowerCase();
+    const f = filterSelect.value;
+
+    const filtered = allUsers.filter((u) => {
+      const matchesFilter = f === 'all' || u.paymentStatus === f;
+      const matchesSearch = !q ||
+        (u.fullName || '').toLowerCase().includes(q) ||
+        (u.universityId || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.transactionId || '').toLowerCase().includes(q);
+      return matchesFilter && matchesSearch;
+    });
+
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7280;padding:24px">No matching records found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map((u) => {
+      const badgeClass = u.portalAccess
+        ? 'verified'
+        : (u.paymentStatus === 'rejected' ? 'rejected' : 'pending');
+      const badgeText = u.portalAccess ? 'verified' : u.paymentStatus;
+
+      return `
+        <tr>
+          <td><b>${u.fullName || '—'}</b></td>
+          <td>${u.universityId || '—'}</td>
+          <td>${u.email || '—'}</td>
+          <td>${u.paymentMethod || '—'}</td>
+          <td><code>${u.transactionId || '—'}</code></td>
+          <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+          <td>
+            ${u.portalAccess
+              ? '<span style="color:#16a34a;font-weight:700">Access Granted</span>'
+              : `<button class="btn btn-ok" onclick="window.handleAction('${u.uid}', 'approve', this)">Approve &amp; Email</button>
+                 <button class="btn btn-no" onclick="window.handleAction('${u.uid}', 'reject', this)">Reject</button>`}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  window.handleAction = async (targetUid, action, btnEl) => {
+    const rowButtons = btnEl.parentElement.querySelectorAll('button');
+    rowButtons.forEach((b) => { b.disabled = true; });
+    statusEl.textContent = action === 'approve'
+      ? 'Granting portal access and sending confirmation email...'
+      : 'Updating payment status...';
+
+    try {
+      const res = await fetch('/api/admin/approve-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ targetUid, action })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Action failed.');
+      statusEl.textContent = data.message;
+      await loadUsers();
+    } catch (err) {
+      statusEl.textContent = err.message;
+      rowButtons.forEach((b) => { b.disabled = false; });
+    }
+  };
+</script>
+</body>
+</html>
