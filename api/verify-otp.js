@@ -1,7 +1,7 @@
-const crypto = require("crypto");
-const { db, auth, emailKey, hashOtp, isEmail } = require("./_lib");
+import crypto from "crypto";
+import { db, auth, emailKey, hashOtp, isEmail } from "./_lib.js";
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const email = String(req.body?.email || "").trim().toLowerCase();
@@ -41,9 +41,10 @@ module.exports = async (req, res) => {
   } catch (e) {
     if (e.code === "auth/email-already-exists")
       return res.status(409).json({ error: "An account with this email already exists." });
+    console.error("createUser error", e);
     return res.status(500).json({ error: "Could not create account." });
   }
 
   await ref.delete();
   return res.status(200).json({ ok: true });
-};
+}
