@@ -219,8 +219,34 @@ main{max-width:760px}
   const form = $('f');
   const btn = form.querySelector('.confirm');
 
+  /* ---- After a successful submission ---- */
+  const REDIRECT_URL = 'Homepage.html'; // must match the file name exactly (case-sensitive)
+  const REDIRECT_AFTER_SECONDS = 90;
+  let submitted = false;
+
+  function lockForm() {
+    submitted = true;
+    form.querySelectorAll('input, button').forEach((el) => { el.disabled = true; });
+    btn.textContent = 'SUBMITTED';
+  }
+
+  function startRedirectCountdown() {
+    const note = document.createElement('p');
+    note.style.marginTop = '10px';
+    $('good').appendChild(note);
+    const endsAt = Date.now() + REDIRECT_AFTER_SECONDS * 1000;
+    (function tick() {
+      const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+      note.innerHTML = 'Redirecting to the homepage in <b>' + left + '</b> second' + (left === 1 ? '' : 's') +
+        '\u2026 <a href="' + REDIRECT_URL + '">Go now</a>';
+      if (left <= 0) { window.location.href = REDIRECT_URL; return; }
+      setTimeout(tick, 1000);
+    })();
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (submitted) return;
     let ok = true;
     let first = null;
     function note(g, el) {
@@ -262,17 +288,25 @@ main{max-width:760px}
         })
       });
 
-      const result = await res.json();
+      const raw = await res.text();
+      let result = {};
+      try { result = JSON.parse(raw); } catch { throw new Error('Server error (' + res.status + '). Please try again.'); }
       if (!res.ok) throw new Error(result.error || 'Failed to submit payment details.');
 
-      btn.textContent = 'SUBMITTED';
+      $('bad').style.display = 'none';
+      lockForm();
       $('good').style.display = 'block';
       $('good').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      startRedirectCountdown();
     } catch (err) {
-      btn.disabled = false;
-      btn.textContent = 'CONFIRM';
       $('bad').textContent = err.message;
       $('bad').style.display = 'block';
+      if (/already been submitted/i.test(err.message)) {
+        lockForm(); // a payment is already recorded for this account
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'CONFIRM';
+      }
     }
   });
 </script>
