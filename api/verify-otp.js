@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { FieldValue } from "firebase-admin/firestore";
 import { db, auth, emailKey, hashOtp, isEmail } from "../lib/server.js";
 
 export default async function handler(req, res) {
@@ -36,8 +37,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Incorrect code." });
   }
 
+  // 1. Create the Auth user
+  let userRecord;
   try {
-    await auth.createUser({ email, password, emailVerified: true });
+    userRecord = await auth.createUser({ email, password, emailVerified: true });
   } catch (e) {
     if (e.code === "auth/email-already-exists")
       return res.status(409).json({ error: "An account with this email already exists." });
@@ -45,6 +48,23 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Could not create account." });
   }
 
+  // 2. Create the Firestore profile that login.html reads (users/{uid})
+  try {
+    await db.collection("users").doc(userRecord.uid).set({
+      email,
+      onboardingStep: 3, // email verified -> next is info_form.html
+      portalAccess: false, // an admin turns this on after payment is verified
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    console.error("users doc error", e);
+    // Roll back so the person can retry instead of being stuck with
+    // an Auth user that has no profile.
+    await auth.deleteUser(userRecord.uid).catch(() => {});
+    return res.status(500).json({ error: "Could not create account." });
+  }
+
+  // 3. Clean up the used OTP
   await ref.delete();
   return res.status(200).json({ ok: true });
 }
