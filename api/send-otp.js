@@ -1,7 +1,7 @@
-const crypto = require("crypto");
-const { db, auth, emailKey, hashOtp, verifyCaptcha, isEmail } = require("./_lib");
+import crypto from "crypto";
+import { db, auth, emailKey, hashOtp, verifyCaptcha, isEmail } from "./_lib.js";
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const email = String(req.body?.email || "").trim().toLowerCase();
@@ -17,7 +17,10 @@ module.exports = async (req, res) => {
     await auth.getUserByEmail(email);
     return res.status(409).json({ error: "An account with this email already exists." });
   } catch (e) {
-    if (e.code !== "auth/user-not-found") return res.status(500).json({ error: "Server error" });
+    if (e.code !== "auth/user-not-found") {
+      console.error("Auth lookup error", e);
+      return res.status(500).json({ error: "Server error" });
+    }
   }
 
   const ref = db.collection("otps").doc(emailKey(email));
@@ -58,4 +61,4 @@ module.exports = async (req, res) => {
     return res.status(502).json({ error: "Could not send email. Try again later." });
   }
   return res.status(200).json({ ok: true });
-};
+}
