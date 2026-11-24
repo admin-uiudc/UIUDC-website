@@ -1,5 +1,5 @@
-const admin = require("firebase-admin");
-const crypto = require("crypto");
+import admin from "firebase-admin";
+import crypto from "crypto";
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -7,16 +7,16 @@ if (!admin.apps.length) {
   });
 }
 
-const db = admin.firestore();
-const auth = admin.auth();
+export const db = admin.firestore();
+export const auth = admin.auth();
 
-const emailKey = (email) =>
+export const emailKey = (email) =>
   crypto.createHash("sha256").update(email).digest("hex");
 
-const hashOtp = (email, otp) =>
+export const hashOtp = (email, otp) =>
   crypto.createHmac("sha256", process.env.OTP_SECRET).update(`${email}:${otp}`).digest("hex");
 
-async function verifyCaptcha(token, ip) {
+export async function verifyCaptcha(token, ip) {
   if (!token) return false;
   const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST",
@@ -31,6 +31,5 @@ async function verifyCaptcha(token, ip) {
   return data.success === true;
 }
 
-const isEmail = (s) => typeof s === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length <= 254;
-
-module.exports = { admin, db, auth, emailKey, hashOtp, verifyCaptcha, isEmail };
+export const isEmail = (s) =>
+  typeof s === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length <= 254;
