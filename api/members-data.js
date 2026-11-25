@@ -10,9 +10,14 @@ const INTERNAL = [
     { title: "Bootcamp Session 3", url: "" },
   ]},
   { label: "Workshop Session Shahriar Kabir Rahat", videos: [
-    { title: "Workshop Part 1", url: "" },
-    { title: "Workshop Part 2", url: "" },
-    { title: "Workshop Part 3", url: "" },
+    { title: "Workshop Shahriar Kabir Rahat S1: Prologue", url: "https://youtu.be/ADel2vut-ho" },
+    { title: "Workshop Shahriar Kabir Rahat S2: Introduction", url: "https://youtu.be/Plf-DtUAbGM" },
+    { title: "Workshop Part #", url: "" },
+    { title: "Workshop Part #", url: "" },
+    { title: "Workshop Shahriar Kabir Rahat S7: Likelihood Analysis", url: "https://youtu.be/3fJRTvfVeQw" },
+    { title: "Workshop Shahriar Kabir Rahat S8: Thought Process & Scripting", url: "https://youtu.be/83GP6RTcIlE" },
+    { title: "Workshop Shahriar Kabir Rahat S9: Response and Comparetive", url: "https://youtu.be/RXa7q9Gm8aI" },
+    { title: "Workshop Part #", url: "" },
   ]},
   { label: "Workshop Session: Knowledge Matters", videos: [
     { title: "International Relations: NAME", url: "" },
