@@ -1,9 +1,14 @@
+import admin from "firebase-admin";
 import { auth } from "../lib/server.js";
 
-/* Workshop titles and links. They stay on the server and are only sent to signed-in members.
-   TO EDIT: change title/url (paste unlisted YouTube links). Keep every quote and comma.
-   Leave url: "" and the video shows as "link coming soon". */
-const INTERNAL = [
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+  });
+}
+const db = admin.firestore();
+
+const DEFAULT_INTERNAL = [
   { label: "AP Debate Bootcamp", videos: [
     { title: "Introduction to AP Debate", url: "" },
     { title: "Bootcamp Session 2", url: "" },
@@ -25,29 +30,29 @@ const INTERNAL = [
     { title: "Workshop Part 3", url: "" },
   ]},
 ];
-const OPEN = [
+
+const DEFAULT_OPEN = [
   { label: "Sample Dropdown 1", videos: [{ title: "Sample Workshop A", url: "" }, { title: "Sample Workshop B", url: "" }, { title: "Sample Workshop C", url: "" }] },
   { label: "Sample Dropdown 2", videos: [{ title: "Sample Workshop A", url: "" }, { title: "Sample Workshop B", url: "" }, { title: "Sample Workshop C", url: "" }] },
   { label: "Sample Dropdown 3", videos: [{ title: "Sample Workshop A", url: "" }, { title: "Sample Workshop B", url: "" }, { title: "Sample Workshop C", url: "" }] },
 ];
 
-/* DiGiLiB (Digital Library): one entry per left-side button. Each file = one table row.
-   name = resource name, date = upload date shown as written, by = uploader,
-   url = public Google Drive (or similar) share link. Leave url: "" for "Link coming soon". */
-const LIBRARY = [
+const DEFAULT_LIBRARY = [
   { label: "Method", files: [ { name: "Sample resource 1", date: "25 Nov 2026", by: "Uploader name", url: "" }, { name: "Sample resource 2", date: "25 Nov 2026", by: "Uploader name", url: "" } ] },
   { label: "Matter", files: [ { name: "Sample resource 1", date: "25 Nov 2026", by: "Uploader name", url: "" }, { name: "Sample resource 2", date: "25 Nov 2026", by: "Uploader name", url: "" } ] },
   { label: "Tips and Tricks", files: [ { name: "Sample resource 1", date: "25 Nov 2026", by: "Uploader name", url: "" }, { name: "Sample resource 2", date: "25 Nov 2026", by: "Uploader name", url: "" } ] },
   { label: "Adjudication", files: [ { name: "Sample resource 1", date: "25 Nov 2026", by: "Uploader name", url: "" }, { name: "Sample resource 2", date: "25 Nov 2026", by: "Uploader name", url: "" } ] },
 ];
 
-/* ---------------- Access control (no need to edit, except isMember) ---------------- */
-
-// Who counts as a UIUDC member? Signup already requires an emailed OTP, so any existing account passes.
-// To allow only approved members, import { db } above and use:
-//   const d = await db.collection("members").doc(decoded.uid).get(); return d.exists;
 async function isMember(decoded) {
-  return true;
+  const [userDoc, adminDoc] = await Promise.all([
+    db.collection("users").doc(decoded.uid).get(),
+    db.collection("admins").doc(decoded.uid).get()
+  ]);
+  if (adminDoc.exists) return true;
+  if (!userDoc.exists) return false;
+  const d = userDoc.data();
+  return d.portalAccess === true && d.paymentStatus === "verified";
 }
 
 export default async function handler(req, res) {
@@ -58,7 +63,27 @@ export default async function handler(req, res) {
   try { decoded = await auth.verifyIdToken(m[1], true); }
   catch (e) { return res.status(401).json({ error: "unauthenticated" }); }
   if (!(await isMember(decoded))) return res.status(403).json({ error: "forbidden" });
-  if (req.query.page === "academy") return res.status(200).json({ internal: INTERNAL, open: OPEN });
-  if (req.query.page === "digilib") return res.status(200).json({ categories: LIBRARY });
+
+  if (req.query.page === "academy") {
+    const snap = await db.collection("site_content").doc("academy").get();
+    const data = snap.exists ? snap.data() : {};
+    return res.status(200).json({
+      internal: data.internal || DEFAULT_INTERNAL,
+      open: data.open || DEFAULT_OPEN
+    });
+  }
+  if (req.query.page === "digilib") {
+    const snap = await db.collection("site_content").doc("digilib").get();
+    const data = snap.exists ? snap.data() : {};
+    return res.status(200).json({
+      categories: data.categories || DEFAULT_LIBRARY
+    });
+  }
+  if (req.query.page === "notices") {
+    const snap = await db.collection("site_content").doc("notices").get();
+    return res.status(200).json({
+      items: snap.exists ? snap.data().items || [] : null
+    });
+  }
   return res.status(404).json({ error: "not found" });
 }
