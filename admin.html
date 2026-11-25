@@ -104,6 +104,9 @@ td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:middle}
         </select>
         <input type="search" id="searchInput" placeholder="Search name, UIU ID, email, or TRX ID…" style="min-width:280px">
       </div>
+      <div style="margin-bottom:16px">
+        <input type="text" id="approvalNote" placeholder="Optional custom note to include in the approval email (e.g., orientation schedule or group link)…" style="width:100%">
+      </div>
       <div class="tw">
         <table>
           <thead>
@@ -190,7 +193,7 @@ function toast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 3000);
+  setTimeout(() => t.classList.remove("show"), 3500);
 }
 
 async function api(method, queryOrBody) {
@@ -250,7 +253,7 @@ function renderMembers() {
     tr.innerHTML = `
       <td><strong>${esc(u.fullName || "—")}</strong><br><span style="color:var(--muted);font-size:12px">${esc(u.email || u.uid)}</span></td>
       <td>${esc(u.universityId || "—")}</td>
-      <td>${u.paymentMethod ? `<b>${esc(u.paymentMethod)}</b>: ${esc(u.transactionId || "")}` : "Not submitted"}</td>
+      <td>${u.paymentMethod ? `<b>${esc(u.paymentMethod)}</b>:${esc(u.transactionId || "")}` : "Not submitted"}</td>
       <td><span class="pill ${badgeCls}">${esc(st)}</span></td>
       <td></td>
     `;
@@ -277,15 +280,22 @@ function renderMembers() {
 
 async function updateMember(uid, approve, btn) {
   btn.disabled = true;
+  const customMessage = document.getElementById("approvalNote")?.value.trim() || "";
   try {
-    await api("POST", { action: "approveMember", uid, approve });
+    const res = await api("POST", { action: "approveMember", uid, approve, customMessage });
     const target = state.users.find((u) => u.uid === uid);
     if (target) {
       target.paymentStatus = approve ? "verified" : "rejected";
       target.portalAccess = approve;
     }
     renderMembers();
-    toast(approve ? "Member approved!" : "Access revoked.");
+    if (!approve) {
+      toast("Access revoked.");
+    } else if (res.emailSent) {
+      toast("Member approved & confirmation email sent!");
+    } else {
+      toast("Member approved, but email failed: " + (res.emailError || "Check Brevo logs"));
+    }
   } catch (e) {
     toast(e.message);
     btn.disabled = false;
@@ -453,53 +463,3 @@ document.getElementById("saveDigilibBtn").onclick = async (e) => {
 };
 
 function esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-async function loadAll() {
-  const data = await api("GET");
-  document.getElementById("adminEmail").textContent = data.adminEmail || "Admin";
-  state.users = data.users || [];
-  state.notices = data.notices || [];
-
-  // If Firestore doesn't have academy/digilib yet, seed the editor from the member endpoint
-  if (data.academy && data.digilib) {
-    state.internal = data.academy.internal || [];
-    state.open = data.academy.open || [];
-    state.digilib = data.digilib || [];
-  } else {
-    const token = await currentUser.getIdToken();
-    const [acRes, dlRes] = await Promise.all([
-      fetch("/api/members-data?page=academy", { headers: { Authorization: "Bearer " + token } }).then((r) => r.json()),
-      fetch("/api/members-data?page=digilib", { headers: { Authorization: "Bearer " + token } }).then((r) => r.json())
-    ]);
-    state.internal = data.academy?.internal || acRes.internal || [];
-    state.open = data.academy?.open || acRes.open || [];
-    state.digilib = data.digilib || dlRes.categories || [];
-  }
-
-  renderMembers();
-  renderNoticesEditor();
-  renderAcademySection("internalEditor", state.internal);
-  renderAcademySection("openEditor", state.open);
-  renderDigilibEditor();
-}
-
-document.getElementById("statusFilter").onchange = renderMembers;
-document.getElementById("searchInput").oninput = renderMembers;
-document.getElementById("refreshBtn").onclick = async () => { await loadAll(); toast("Refreshed!"); };
-document.getElementById("logoutBtn").onclick = async () => { await signOut(auth); location.href = "LogIn.html"; };
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) { location.replace("LogIn.html"); return; }
-  currentUser = user;
-  try {
-    await loadAll();
-    gate.remove();
-  } catch (err) {
-    gate.innerHTML = `<strong>${esc(err.message)}</strong><a class="btn" href="portal.html">Back to Portal</a>`;
-  }
-});
-</script>
-</body>
-</html>
