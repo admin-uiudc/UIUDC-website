@@ -55,6 +55,8 @@ nav.links a:hover{text-decoration:underline}
 .board li:last-child{border-bottom:0}
 .n-title{font-weight:500;font-size:16px}
 .n-date{color:var(--muted);font-size:13px;white-space:nowrap}
+.n-link{color:var(--orange);font-weight:600;font-size:14px;margin-left:10px;text-decoration:underline}
+.n-link:hover{color:var(--orange-ink)}
 .board-empty{padding:22px;color:var(--muted)}
 
 /* 2. google calendar */
@@ -359,20 +361,35 @@ var SAMPLE_EVENTS = [
   function fromIso(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
 
   /* ---------- notice board ---------- */
-  var nl = document.getElementById("noticeList");
-  var sorted = NOTICES.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
-  if (!sorted.length) {
-    nl.parentNode.replaceChild(el("div", "board-empty", "No notices yet."), nl);
-  } else {
+  window.renderNotices = function (list) {
+    var nl = document.getElementById("noticeList");
+    if (!nl) return;
+    nl.textContent = "";
+    var sorted = (list || []).slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    if (!sorted.length) {
+      var empty = el("li", "board-empty", "No notices yet.");
+      nl.appendChild(empty);
+      return;
+    }
     sorted.forEach(function (n) {
       var li = document.createElement("li");
-      li.appendChild(el("span", "n-title", n.title));
+      var left = el("span", "n-title");
+      left.appendChild(document.createTextNode(n.title));
+      if (n.url) {
+        var a = el("a", "n-link", n.linkText || "View full notice \u2192");
+        a.href = n.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        left.appendChild(a);
+      }
+      li.appendChild(left);
       var t = el("time", "n-date", fromIso(n.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }));
       t.setAttribute("datetime", n.date);
       li.appendChild(t);
       nl.appendChild(li);
     });
-  }
+  };
+  window.renderNotices(NOTICES);
 
   /* ---------- Google Calendar embed ---------- */
   var active = CALENDARS.filter(function (c) { return isSet(c.id); });
@@ -558,10 +575,28 @@ const auth = getAuth(initializeApp(firebaseConfig));
 
 /* Members only: show the page once a user is confirmed, otherwise go to the login page. */
 const guardTimer = setTimeout(function () { window.location.replace("LogIn.html"); }, 10000);
-onAuthStateChanged(auth, function (user) {
+onAuthStateChanged(auth, async function (user) {
   clearTimeout(guardTimer);
-  if (user) document.documentElement.classList.remove("auth-pending");
-  else window.location.replace("LogIn.html");
+  if (user) {
+    document.documentElement.classList.remove("auth-pending");
+    try {
+      const t = await user.getIdToken();
+      const r = await fetch("/api/members-data?page=notices", {
+        headers: { Authorization: "Bearer " + t },
+        cache: "no-store"
+      });
+      if (r.ok) {
+        const data = await r.json();
+        if (Array.isArray(data.items) && data.items.length) {
+          window.renderNotices(data.items);
+        }
+      }
+    } catch (e) {
+      // Keep fallback NOTICES if fetch fails
+    }
+  } else {
+    window.location.replace("LogIn.html");
+  }
 });
 document.getElementById("logoutBtn").addEventListener("click", async function (e) {
   e.preventDefault();
