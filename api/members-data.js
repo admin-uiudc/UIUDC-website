@@ -59,5 +59,6 @@ export default async function handler(req, res) {
   catch (e) { return res.status(401).json({ error: "unauthenticated" }); }
   if (!(await isMember(decoded))) return res.status(403).json({ error: "forbidden" });
   if (req.query.page === "academy") return res.status(200).json({ internal: INTERNAL, open: OPEN });
+  if (req.query.page === "digilib") return res.status(200).json({ categories: LIBRARY });
   return res.status(404).json({ error: "not found" });
 }
