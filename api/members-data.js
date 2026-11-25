@@ -31,6 +31,16 @@ const OPEN = [
   { label: "Sample Dropdown 3", videos: [{ title: "Sample Workshop A", url: "" }, { title: "Sample Workshop B", url: "" }, { title: "Sample Workshop C", url: "" }] },
 ];
 
+/* DiGiLiB (Digital Library): one entry per left-side button. Each file = one table row.
+   name = resource name, date = upload date shown as written, by = uploader,
+   url = public Google Drive (or similar) share link. Leave url: "" for "Link coming soon". */
+const LIBRARY = [
+  { label: "Method", files: [ { name: "Sample resource 1", date: "25 Nov 2026", by: "Uploader name", url: "" }, { name: "Sample resource 2", date: "25 Nov 2026", by: "Uploader name", url: "" } ] },
+  { label: "Matter", files: [ { name: "Sample resource 1", date: "25 Nov 2026", by: "Uploader name", url: "" }, { name: "Sample resource 2", date: "25 Nov 2026", by: "Uploader name", url: "" } ] },
+  { label: "Tips and Tricks", files: [ { name: "Sample resource 1", date: "25 Nov 2026", by: "Uploader name", url: "" }, { name: "Sample resource 2", date: "25 Nov 2026", by: "Uploader name", url: "" } ] },
+  { label: "Adjudication", files: [ { name: "Sample resource 1", date: "25 Nov 2026", by: "Uploader name", url: "" }, { name: "Sample resource 2", date: "25 Nov 2026", by: "Uploader name", url: "" } ] },
+];
+
 /* ---------------- Access control (no need to edit, except isMember) ---------------- */
 
 // Who counts as a UIUDC member? Signup already requires an emailed OTP, so any existing account passes.
