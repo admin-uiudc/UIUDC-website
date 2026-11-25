@@ -1,9 +1,9 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    {
-      "source": "/",
-      "destination": "/Homepage.html"
-    }
+    { "source": "/", "destination": "/Homepage" },
+    { "source": "/", "destination": "/Homepage" },
+    { "source": "/digilib", "destination": "/DiGiLiB" },
+    { "source": "/login", "destination": "/LogIn" }
   ]
 }
