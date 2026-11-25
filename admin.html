@@ -3,239 +3,503 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin Dashboard | UIU Debate Club</title>
+<meta name="robots" content="noindex,nofollow">
+<title>Admin Console | UIU Debate Club</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--orange:#f0801f;--orange-soft:#f6b57c;--ink:#1f2937;--bg:#f9fafb}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;padding:28px 20px 64px}
-  .wrap{max-width:1160px;margin:0 auto}
-  .head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;background:linear-gradient(90deg,#ff3b30 0%,#ff6a3d 55%,#ff9550 100%);color:#fff;padding:22px 28px;border-radius:14px;border:2px solid #111}
-  .head h1{margin:0;font-size:clamp(20px,2.5vw,28px);font-weight:700}
-  .head p{margin:4px 0 0;font-size:14px;opacity:.95}
-  .actions-top{display:flex;gap:10px;align-items:center}
-  .btn-pill{background:#000;color:#fff;border:0;padding:10px 20px;border-radius:999px;font:600 13px Montserrat,sans-serif;cursor:pointer}
-  .btn-pill:hover{opacity:.88}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:22px}
-  .stat{background:#fff;border:2px solid var(--orange);border-radius:14px;padding:18px 22px}
-  .stat .k{font-size:13px;color:#6b7280;font-weight:600}
-  .stat .v{font-size:28px;font-weight:700;color:var(--orange);margin-top:4px}
-  .card{background:#fff;border:2px solid var(--orange);border-radius:16px;padding:22px;margin-top:22px}
-  .toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px}
-  .search{height:44px;min-width:260px;border:2px solid var(--orange);border-radius:999px;padding:0 18px;font:500 14px Montserrat,sans-serif;color:var(--ink)}
-  .search:focus{outline:none;box-shadow:0 0 0 3px rgba(240,128,31,.25)}
-  .table-wrap{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;min-width:800px}
-  th,td{padding:12px 14px;text-align:left;border-bottom:1px solid #e5e7eb;font-size:14px}
-  th{color:var(--orange);font-weight:700;background:#fff7ed}
-  .badge{display:inline-block;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:700}
-  .pending{background:#fef3c7;color:#92400e}
-  .verified{background:#d1fae5;color:#065f46}
-  .rejected{background:#fee2e2;color:#991b1b}
-  .btn{border:0;border-radius:999px;padding:8px 15px;font:700 12px Montserrat,sans-serif;cursor:pointer;margin-right:6px}
-  .btn-ok{background:#16a34a;color:#fff}
-  .btn-ok:hover{background:#15803d}
-  .btn-no{background:#dc2626;color:#fff}
-  .btn-no:hover{background:#b91c1c}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
-  #status{margin-top:16px;font-weight:600;color:var(--orange);min-height:22px}
+:root{--bg:#f7f8fa;--white:#fff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--orange:#ff7a00;--orange-ink:#a14400;--green:#15803d;--red:#b91c1c;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,sans-serif;line-height:1.5}
+.wrap{max-width:1280px;margin:0 auto;padding:0 32px}
+header{background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.nav{display:flex;align-items:center;justify-content:space-between;height:76px;gap:16px}
+.brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px}
+.badge{background:#fff4e8;color:var(--orange-ink);border:1px solid #ffd5b0;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px}
+.actions{display:flex;align-items:center;gap:10px}
+.btn{background:var(--orange);color:#fff;border:0;border-radius:6px;padding:9px 16px;font:600 14px Inter,sans-serif;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{filter:brightness(.94)}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.sec{background:var(--white);color:var(--ink);border:1px solid var(--line)}
+.btn.ok{background:var(--green)}
+.btn.bad{background:var(--red)}
+.btn.sm{padding:6px 12px;font-size:13px}
+
+.tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);margin:28px 0 24px;overflow-x:auto}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:12px 18px;font:600 15px Inter,sans-serif;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tab.active{color:var(--orange-ink);border-bottom-color:var(--orange)}
+.panel{display:none}
+.panel.active{display:block}
+
+.card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:20px}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.card-head h2,.card-head h3{margin:0;font-size:19px}
+
+.toolbar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+input,select{border:1px solid var(--line);border-radius:8px;padding:9px 12px;font:14px Inter,sans-serif;color:var(--ink);background:#fff}
+input:focus,select:focus{outline:2px solid var(--orange);border-color:var(--orange)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:720px}
+th{background:#f9fafb;text-align:left;padding:12px 14px;font-weight:600;border-bottom:1px solid var(--line)}
+td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:middle}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600}
+.pill.pending{background:#fef3c7;color:#92400e}
+.pill.verified{background:#dcfce7;color:#166534}
+.pill.rejected{background:#fee2e2;color:#991b1b}
+.pill.incomplete{background:#f3f4f6;color:#4b5563}
+
+.item-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.item-row:last-child{border-bottom:0}
+.lib-row{display:grid;grid-template-columns:1.4fr .8fr 1fr 1.4fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.notice-row{display:grid;grid-template-columns:1.5fr .7fr 1fr 1.3fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+
+#gate{position:fixed;inset:0;z-index:99;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
+.toast{position:fixed;bottom:24px;right:24px;background:#1f2937;color:#fff;padding:12px 18px;border-radius:8px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+.toast.show{opacity:1}
+@media(max-width:860px){
+  .wrap{padding:0 16px}
+  .item-row,.lib-row,.notice-row{grid-template-columns:1fr;background:#fafafa;padding:12px;border-radius:8px;margin-bottom:8px}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="head">
-    <div>
-      <h1>UIU Debate Club &mdash; Admin Dashboard</h1>
-      <p>Verify recruitment payments, grant portal access, and send confirmation emails</p>
+
+<div id="gate" role="status">Verifying admin privileges…</div>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <span>UIUDC Admin Console</span>
+      <span class="badge" id="adminEmail">Admin</span>
     </div>
-    <div class="actions-top">
-      <button class="btn-pill" id="refreshBtn" type="button">Refresh</button>
-      <button class="btn-pill" id="logoutBtn" type="button">Log Out</button>
+    <div class="actions">
+      <a class="btn sec" href="portal.html">View Portal</a>
+      <button class="btn" id="logoutBtn" type="button">Log Out</button>
     </div>
   </div>
+</header>
 
-  <div id="status">Checking admin permissions...</div>
-
-  <div class="stats" id="statsGrid" style="display:none">
-    <div class="stat"><div class="k">Total Submissions</div><div class="v" id="cTotal">0</div></div>
-    <div class="stat"><div class="k">Pending Verification</div><div class="v" id="cPending">0</div></div>
-    <div class="stat"><div class="k">Approved Members</div><div class="v" id="cApproved">0</div></div>
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="members" role="tab">Membership Requests</button>
+    <button class="tab" data-tab="notices" role="tab">Notice Board</button>
+    <button class="tab" data-tab="academy" role="tab">Digital Academy</button>
+    <button class="tab" data-tab="digilib" role="tab">DiGiLiB</button>
   </div>
 
-  <div class="card" id="tableCard" style="display:none">
-    <div class="toolbar">
-      <input class="search" id="searchInput" type="search" placeholder="Search by name, ID, email, or TRX...">
-      <select class="search" id="filterSelect" style="min-width:170px">
-        <option value="all">All Statuses</option>
-        <option value="pending_verification">Pending Verification</option>
-        <option value="verified">Verified</option>
-        <option value="rejected">Rejected</option>
-      </select>
+  <!-- 1. MEMBERSHIP REQUESTS -->
+  <section class="panel active" id="tab-members">
+    <div class="card">
+      <div class="card-head">
+        <h2>Membership &amp; Payment Verification</h2>
+        <button class="btn sec sm" id="refreshBtn" type="button">Refresh List</button>
+      </div>
+      <div class="toolbar">
+        <select id="statusFilter">
+          <option value="pending_verification" selected>Pending Verification</option>
+          <option value="all">All Registered Users</option>
+          <option value="verified">Verified Members</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <input type="search" id="searchInput" placeholder="Search name, UIU ID, email, or TRX ID…" style="min-width:280px">
+      </div>
+      <div class="tw">
+        <table>
+          <thead>
+            <tr>
+              <th>Applicant</th>
+              <th>UIU ID</th>
+              <th>Method &amp; TRX / Receipt</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="membersBody"></tbody>
+        </table>
+      </div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Full Name</th>
-            <th>University ID</th>
-            <th>Email</th>
-            <th>Method</th>
-            <th>TRX / App ID</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
+  </section>
+
+  <!-- 2. NOTICE BOARD -->
+  <section class="panel" id="tab-notices">
+    <div class="card">
+      <div class="card-head">
+        <h2>Portal Notice Board</h2>
+        <div class="actions">
+          <button class="btn sec sm" id="addNoticeBtn" type="button">+ Add Notice</button>
+          <button class="btn sm" id="saveNoticesBtn" type="button">Publish Notices</button>
+        </div>
+      </div>
+      <p style="color:var(--muted);font-size:14px;margin-top:0">Add a title, date, and optional hyperlink (e.g., Google Drive PDF, Facebook post, or form link) to display the full notice.</p>
+      <div id="noticesEditor"></div>
     </div>
-  </div>
-</div>
+  </section>
+
+  <!-- 3. DIGITAL ACADEMY -->
+  <section class="panel" id="tab-academy">
+    <div class="card">
+      <div class="card-head">
+        <h2>Digital Academy Workshops</h2>
+        <button class="btn sm" id="saveAcademyBtn" type="button">Save Academy Changes</button>
+      </div>
+      <h3>Internal Workshops (Members Only)</h3>
+      <div id="internalEditor"></div>
+      <button class="btn sec sm" id="addInternalGroupBtn" type="button" style="margin-bottom:24px">+ Add Internal Category</button>
+
+      <h3>Open Workshop Collection</h3>
+      <div id="openEditor"></div>
+      <button class="btn sec sm" id="addOpenGroupBtn" type="button">+ Add Open Category</button>
+    </div>
+  </section>
+
+  <!-- 4. DIGILIB -->
+  <section class="panel" id="tab-digilib">
+    <div class="card">
+      <div class="card-head">
+        <h2>DiGiLiB Resource Categories</h2>
+        <div class="actions">
+          <button class="btn sec sm" id="addLibCatBtn" type="button">+ Add Category</button>
+          <button class="btn sm" id="saveDigilibBtn" type="button">Save DiGiLiB Changes</button>
+        </div>
+      </div>
+      <div id="digilibEditor"></div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBWsBJ1Hi9cqE2RMtmEF_NHQVjJktFiii4",
-    authDomain: "uiudc-website.firebaseapp.com",
-    projectId: "uiudc-website",
-    storageBucket: "uiudc-website.firebasestorage.app",
-    messagingSenderId: "680858269973",
-    appId: "1:680858269973:web:bc39098d2c9674fd6f911c",
-    measurementId: "G-S3WJ16QZY7"
+const firebaseConfig = {
+  apiKey: "AIzaSyBWsBJ1Hi9cqE2RMtmEF_NHQVjJktFiii4",
+  authDomain: "uiudc-website.firebaseapp.com",
+  projectId: "uiudc-website",
+  appId: "1:680858269973:web:bc39098d2c9674fd6f911c"
+};
+
+const auth = getAuth(initializeApp(firebaseConfig));
+const gate = document.getElementById("gate");
+let currentUser = null;
+let state = { users: [], notices: [], internal: [], open: [], digilib: [] };
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+async function api(method, queryOrBody) {
+  const token = await currentUser.getIdToken();
+  const url = method === "GET" ? "/api/admin" : "/api/admin";
+  const opts = {
+    method,
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }
   };
+  if (method === "POST") opts.body = JSON.stringify(queryOrBody);
+  const res = await fetch(url, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const statusEl = document.getElementById('status');
-  const tbody = document.getElementById('tbody');
-  const searchInput = document.getElementById('searchInput');
-  const filterSelect = document.getElementById('filterSelect');
+/* ---------- Tabs ---------- */
+document.querySelectorAll(".tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab, .panel").forEach((el) => el.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
 
-  let adminToken = '';
-  let allUsers = [];
+/* ---------- 1. Members ---------- */
+function renderMembers() {
+  const tbody = document.getElementById("membersBody");
+  const filter = document.getElementById("statusFilter").value;
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
 
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    signOut(auth).then(() => { window.location.href = 'LogIn.html'; });
+  const filtered = state.users.filter((u) => {
+    const st = u.paymentStatus || "incomplete";
+    if (filter !== "all" && st !== filter) return false;
+    if (!q) return true;
+    return [u.fullName, u.universityId, u.email, u.transactionId]
+      .some((v) => String(v || "").toLowerCase().includes(q));
   });
 
-  document.getElementById('refreshBtn').addEventListener('click', () => {
-    if (adminToken) loadUsers();
-  });
-
-  searchInput.addEventListener('input', renderTable);
-  filterSelect.addEventListener('change', renderTable);
-
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      window.location.href = 'LogIn.html';
-      return;
-    }
-    const tokenResult = await user.getIdTokenResult(true);
-    if (tokenResult.claims.admin !== true) {
-      statusEl.textContent = 'Access Denied: Your account does not have admin privileges.';
-      return;
-    }
-    adminToken = tokenResult.token;
-    await loadUsers();
-  });
-
-  async function loadUsers() {
-    statusEl.textContent = 'Loading submitted payments...';
-    const res = await fetch('/api/admin/pending-users', {
-      headers: { Authorization: `Bearer ${adminToken}` }
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      statusEl.textContent = data.error || 'Failed to load applicants.';
-      return;
-    }
-
-    allUsers = data.users || [];
-    const pendingCount = allUsers.filter(u => !u.portalAccess && u.paymentStatus !== 'rejected').length;
-    const approvedCount = allUsers.filter(u => u.portalAccess).length;
-
-    document.getElementById('cTotal').textContent = allUsers.length;
-    document.getElementById('cPending').textContent = pendingCount;
-    document.getElementById('cApproved').textContent = approvedCount;
-
-    document.getElementById('statsGrid').style.display = 'grid';
-    document.getElementById('tableCard').style.display = 'block';
-    statusEl.textContent = `Loaded ${allUsers.length} member payment record(s).`;
-    renderTable();
+  tbody.textContent = "";
+  if (!filtered.length) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 5;
+    td.style.color = "var(--muted)";
+    td.textContent = "No matching records found.";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
   }
 
-  function renderTable() {
-    const q = searchInput.value.trim().toLowerCase();
-    const f = filterSelect.value;
+  filtered.forEach((u) => {
+    const tr = document.createElement("tr");
+    const st = u.paymentStatus || "incomplete";
+    const badgeCls = st === "verified" ? "verified" : st === "pending_verification" ? "pending" : st === "rejected" ? "rejected" : "incomplete";
 
-    const filtered = allUsers.filter((u) => {
-      const matchesFilter = f === 'all' || u.paymentStatus === f;
-      const matchesSearch = !q ||
-        (u.fullName || '').toLowerCase().includes(q) ||
-        (u.universityId || '').toLowerCase().includes(q) ||
-        (u.email || '').toLowerCase().includes(q) ||
-        (u.transactionId || '').toLowerCase().includes(q);
-      return matchesFilter && matchesSearch;
-    });
+    tr.innerHTML = `
+      <td><strong>${esc(u.fullName || "—")}</strong><br><span style="color:var(--muted);font-size:12px">${esc(u.email || u.uid)}</span></td>
+      <td>${esc(u.universityId || "—")}</td>
+      <td>${u.paymentMethod ? `<b>${esc(u.paymentMethod)}</b>: ${esc(u.transactionId || "")}` : "Not submitted"}</td>
+      <td><span class="pill ${badgeCls}">${esc(st)}</span></td>
+      <td></td>
+    `;
 
-    if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7280;padding:24px">No matching records found.</td></tr>';
-      return;
+    const actionCell = tr.lastElementChild;
+    if (st !== "verified") {
+      const appBtn = document.createElement("button");
+      appBtn.className = "btn ok sm";
+      appBtn.textContent = "Approve";
+      appBtn.onclick = () => updateMember(u.uid, true, appBtn);
+      actionCell.appendChild(appBtn);
     }
+    if (st === "pending_verification" || st === "verified") {
+      const rejBtn = document.createElement("button");
+      rejBtn.className = "btn bad sm";
+      rejBtn.style.marginLeft = "6px";
+      rejBtn.textContent = st === "verified" ? "Revoke" : "Reject";
+      rejBtn.onclick = () => updateMember(u.uid, false, rejBtn);
+      actionCell.appendChild(rejBtn);
+    }
+    tbody.appendChild(tr);
+  });
+}
 
-    tbody.innerHTML = filtered.map((u) => {
-      const badgeClass = u.portalAccess
-        ? 'verified'
-        : (u.paymentStatus === 'rejected' ? 'rejected' : 'pending');
-      const badgeText = u.portalAccess ? 'verified' : u.paymentStatus;
+async function updateMember(uid, approve, btn) {
+  btn.disabled = true;
+  try {
+    await api("POST", { action: "approveMember", uid, approve });
+    const target = state.users.find((u) => u.uid === uid);
+    if (target) {
+      target.paymentStatus = approve ? "verified" : "rejected";
+      target.portalAccess = approve;
+    }
+    renderMembers();
+    toast(approve ? "Member approved!" : "Access revoked.");
+  } catch (e) {
+    toast(e.message);
+    btn.disabled = false;
+  }
+}
 
-      return `
-        <tr>
-          <td><b>${u.fullName || '—'}</b></td>
-          <td>${u.universityId || '—'}</td>
-          <td>${u.email || '—'}</td>
-          <td>${u.paymentMethod || '—'}</td>
-          <td><code>${u.transactionId || '—'}</code></td>
-          <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-          <td>
-            ${u.portalAccess
-              ? '<span style="color:#16a34a;font-weight:700">Access Granted</span>'
-              : `<button class="btn btn-ok" onclick="window.handleAction('${u.uid}', 'approve', this)">Approve &amp; Email</button>
-                 <button class="btn btn-no" onclick="window.handleAction('${u.uid}', 'reject', this)">Reject</button>`}
-          </td>
-        </tr>
+/* ---------- 2. Notices ---------- */
+function renderNoticesEditor() {
+  const wrap = document.getElementById("noticesEditor");
+  wrap.textContent = "";
+  state.notices.forEach((n, idx) => {
+    const row = document.createElement("div");
+    row.className = "notice-row";
+    row.innerHTML = `
+      <input type="text" placeholder="Notice title" value="${esc(n.title || "")}">
+      <input type="date" value="${esc(n.date || new Date().toISOString().slice(0, 10))}">
+      <input type="text" placeholder="Link label (e.g. Read Full Notice)" value="${esc(n.linkText || "")}">
+      <input type="url" placeholder="https://... (optional full notice URL)" value="${esc(n.url || "")}">
+      <button type="button" class="btn bad sm">Remove</button>
+    `;
+    const inputs = row.querySelectorAll("input");
+    inputs[0].oninput = (e) => (n.title = e.target.value);
+    inputs[1].oninput = (e) => (n.date = e.target.value);
+    inputs[2].oninput = (e) => (n.linkText = e.target.value);
+    inputs[3].oninput = (e) => (n.url = e.target.value);
+    row.querySelector("button").onclick = () => { state.notices.splice(idx, 1); renderNoticesEditor(); };
+    wrap.appendChild(row);
+  });
+}
+
+document.getElementById("addNoticeBtn").onclick = () => {
+  state.notices.unshift({ title: "", date: new Date().toISOString().slice(0, 10), linkText: "View Notice", url: "" });
+  renderNoticesEditor();
+};
+
+document.getElementById("saveNoticesBtn").onclick = async (e) => {
+  e.target.disabled = true;
+  try {
+    const items = state.notices.filter((n) => n.title.trim());
+    await api("POST", { action: "saveNotices", items });
+    state.notices = items;
+    renderNoticesEditor();
+    toast("Notice board updated!");
+  } catch (err) { toast(err.message); }
+  finally { e.target.disabled = false; }
+};
+
+/* ---------- 3. Digital Academy ---------- */
+function renderAcademySection(containerId, list) {
+  const wrap = document.getElementById(containerId);
+  wrap.textContent = "";
+  list.forEach((group, gIdx) => {
+    const box = document.createElement("div");
+    box.className = "card";
+    box.style.background = "#fafafa";
+    box.innerHTML = `
+      <div class="card-head">
+        <input type="text" value="${esc(group.label || "")}" placeholder="Category Title" style="font-weight:600;min-width:260px">
+        <div class="actions">
+          <button type="button" class="btn sec sm add-vid">+ Add Video</button>
+          <button type="button" class="btn bad sm del-grp">Delete Category</button>
+        </div>
+      </div>
+      <div class="vids"></div>
+    `;
+    box.querySelector("input").oninput = (e) => (group.label = e.target.value);
+    box.querySelector(".del-grp").onclick = () => { list.splice(gIdx, 1); renderAcademySection(containerId, list); };
+    box.querySelector(".add-vid").onclick = () => { group.videos.push({ title: "", url: "" }); renderAcademySection(containerId, list); };
+
+    const vidsWrap = box.querySelector(".vids");
+    (group.videos || []).forEach((v, vIdx) => {
+      const r = document.createElement("div");
+      r.className = "item-row";
+      r.innerHTML = `
+        <input type="text" placeholder="Session Title" value="${esc(v.title || "")}">
+        <input type="url" placeholder="Unlisted YouTube URL (leave blank for coming soon)" value="${esc(v.url || "")}">
+        <button type="button" class="btn bad sm">Remove</button>
       `;
-    }).join('');
+      const inp = r.querySelectorAll("input");
+      inp[0].oninput = (e) => (v.title = e.target.value);
+      inp[1].oninput = (e) => (v.url = e.target.value);
+      r.querySelector("button").onclick = () => { group.videos.splice(vIdx, 1); renderAcademySection(containerId, list); };
+      vidsWrap.appendChild(r);
+    });
+    wrap.appendChild(box);
+  });
+}
+
+document.getElementById("addInternalGroupBtn").onclick = () => {
+  state.internal.push({ label: "New Internal Workshop Series", videos: [] });
+  renderAcademySection("internalEditor", state.internal);
+};
+document.getElementById("addOpenGroupBtn").onclick = () => {
+  state.open.push({ label: "New Open Workshop Series", videos: [] });
+  renderAcademySection("openEditor", state.open);
+};
+document.getElementById("saveAcademyBtn").onclick = async (e) => {
+  e.target.disabled = true;
+  try {
+    await api("POST", { action: "saveAcademy", internal: state.internal, open: state.open });
+    toast("Digital Academy saved!");
+  } catch (err) { toast(err.message); }
+  finally { e.target.disabled = false; }
+};
+
+/* ---------- 4. DiGiLiB ---------- */
+function renderDigilibEditor() {
+  const wrap = document.getElementById("digilibEditor");
+  wrap.textContent = "";
+  state.digilib.forEach((cat, cIdx) => {
+    const box = document.createElement("div");
+    box.className = "card";
+    box.style.background = "#fafafa";
+    box.innerHTML = `
+      <div class="card-head">
+        <input type="text" value="${esc(cat.label || "")}" placeholder="Category Name (e.g. Method)" style="font-weight:600;min-width:240px">
+        <div class="actions">
+          <button type="button" class="btn sec sm add-file">+ Add Resource</button>
+          <button type="button" class="btn bad sm del-cat">Delete Category</button>
+        </div>
+      </div>
+      <div class="files"></div>
+    `;
+    box.querySelector("input").oninput = (e) => (cat.label = e.target.value);
+    box.querySelector(".del-cat").onclick = () => { state.digilib.splice(cIdx, 1); renderDigilibEditor(); };
+    box.querySelector(".add-file").onclick = () => {
+      cat.files.push({ name: "", date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }), by: "UIUDC Academic", url: "" });
+      renderDigilibEditor();
+    };
+
+    const filesWrap = box.querySelector(".files");
+    (cat.files || []).forEach((f, fIdx) => {
+      const r = document.createElement("div");
+      r.className = "lib-row";
+      r.innerHTML = `
+        <input type="text" placeholder="Resource Name" value="${esc(f.name || "")}">
+        <input type="text" placeholder="Date (e.g. 25 Nov 2026)" value="${esc(f.date || "")}">
+        <input type="text" placeholder="Uploaded By" value="${esc(f.by || "")}">
+        <input type="url" placeholder="Google Drive / Share URL" value="${esc(f.url || "")}">
+        <button type="button" class="btn bad sm">Remove</button>
+      `;
+      const inp = r.querySelectorAll("input");
+      inp[0].oninput = (e) => (f.name = e.target.value);
+      inp[1].oninput = (e) => (f.date = e.target.value);
+      inp[2].oninput = (e) => (f.by = e.target.value);
+      inp[3].oninput = (e) => (f.url = e.target.value);
+      r.querySelector("button").onclick = () => { cat.files.splice(fIdx, 1); renderDigilibEditor(); };
+      filesWrap.appendChild(r);
+    });
+    wrap.appendChild(box);
+  });
+}
+
+document.getElementById("addLibCatBtn").onclick = () => {
+  state.digilib.push({ label: "New Category", files: [] });
+  renderDigilibEditor();
+};
+document.getElementById("saveDigilibBtn").onclick = async (e) => {
+  e.target.disabled = true;
+  try {
+    await api("POST", { action: "saveDigilib", categories: state.digilib });
+    toast("DiGiLiB updated!");
+  } catch (err) { toast(err.message); }
+  finally { e.target.disabled = false; }
+};
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+async function loadAll() {
+  const data = await api("GET");
+  document.getElementById("adminEmail").textContent = data.adminEmail || "Admin";
+  state.users = data.users || [];
+  state.notices = data.notices || [];
+
+  // If Firestore doesn't have academy/digilib yet, seed the editor from the member endpoint
+  if (data.academy && data.digilib) {
+    state.internal = data.academy.internal || [];
+    state.open = data.academy.open || [];
+    state.digilib = data.digilib || [];
+  } else {
+    const token = await currentUser.getIdToken();
+    const [acRes, dlRes] = await Promise.all([
+      fetch("/api/members-data?page=academy", { headers: { Authorization: "Bearer " + token } }).then((r) => r.json()),
+      fetch("/api/members-data?page=digilib", { headers: { Authorization: "Bearer " + token } }).then((r) => r.json())
+    ]);
+    state.internal = data.academy?.internal || acRes.internal || [];
+    state.open = data.academy?.open || acRes.open || [];
+    state.digilib = data.digilib || dlRes.categories || [];
   }
 
-  window.handleAction = async (targetUid, action, btnEl) => {
-    const rowButtons = btnEl.parentElement.querySelectorAll('button');
-    rowButtons.forEach((b) => { b.disabled = true; });
-    statusEl.textContent = action === 'approve'
-      ? 'Granting portal access and sending confirmation email...'
-      : 'Updating payment status...';
+  renderMembers();
+  renderNoticesEditor();
+  renderAcademySection("internalEditor", state.internal);
+  renderAcademySection("openEditor", state.open);
+  renderDigilibEditor();
+}
 
-    try {
-      const res = await fetch('/api/admin/approve-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminToken}`
-        },
-        body: JSON.stringify({ targetUid, action })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Action failed.');
-      statusEl.textContent = data.message;
-      await loadUsers();
-    } catch (err) {
-      statusEl.textContent = err.message;
-      rowButtons.forEach((b) => { b.disabled = false; });
-    }
-  };
+document.getElementById("statusFilter").onchange = renderMembers;
+document.getElementById("searchInput").oninput = renderMembers;
+document.getElementById("refreshBtn").onclick = async () => { await loadAll(); toast("Refreshed!"); };
+document.getElementById("logoutBtn").onclick = async () => { await signOut(auth); location.href = "LogIn.html"; };
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { location.replace("LogIn.html"); return; }
+  currentUser = user;
+  try {
+    await loadAll();
+    gate.remove();
+  } catch (err) {
+    gate.innerHTML = `<strong>${esc(err.message)}</strong><a class="btn" href="portal.html">Back to Portal</a>`;
+  }
+});
 </script>
 </body>
 </html>
