@@ -89,17 +89,31 @@ export default async function handler(req, res) {
 
     // 1. GET: Fetch all users, notices, academy, and digilib data
     if (req.method === 'GET') {
-      const [usersSnap, noticesDoc, academyDoc, digilibDoc] = await Promise.all([
+      const [usersSnap, adminsSnap, noticesDoc, academyDoc, digilibDoc] = await Promise.all([
         db.collection('users').get(),
+        db.collection('admins').get(),
         db.collection('site_content').doc('notices').get(),
         db.collection('site_content').doc('academy').get(),
         db.collection('site_content').doc('digilib').get()
       ]);
 
       const users = usersSnap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+
+      // Admins created by hand in Firestore may have no email field: look it up from Auth.
+      const admins = await Promise.all(adminsSnap.docs.map(async (d) => {
+        const data = d.data();
+        let email = data.email || '';
+        if (!email) {
+          email = (await admin.auth().getUser(d.id).catch(() => null))?.email || '';
+        }
+        return { uid: d.id, email, addedBy: data.addedBy || '' };
+      }));
+
       return res.status(200).json({
         adminEmail: adminUser.email,
+        adminUid: adminUser.uid,
         users,
+        admins,
         notices: noticesDoc.exists ? noticesDoc.data().items || [] : null,
         academy: academyDoc.exists ? academyDoc.data() : null,
         digilib: digilibDoc.exists ? digilibDoc.data().categories || [] : null
@@ -177,6 +191,30 @@ export default async function handler(req, res) {
           updatedBy: adminUser.email || adminUser.uid,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === 'addAdmin') {
+        const email = String(req.body.email || '').trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw fail(400, 'Enter a valid email address.');
+        const target = await admin.auth().getUserByEmail(email).catch(() => {
+          throw fail(404, 'No account found with that email. They must sign up first.');
+        });
+        const ref = db.collection('admins').doc(target.uid);
+        if ((await ref.get()).exists) throw fail(400, 'That user is already an admin.');
+        await ref.set({
+          email: target.email || email,
+          addedBy: adminUser.email || adminUser.uid,
+          addedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        return res.status(200).json({ success: true, admin: { uid: target.uid, email: target.email || email, addedBy: adminUser.email || adminUser.uid } });
+      }
+
+      if (action === 'removeAdmin') {
+        const { uid } = req.body;
+        if (!uid) throw fail(400, 'Missing admin UID.');
+        if (uid === adminUser.uid) throw fail(400, 'You cannot remove your own admin access.');
+        await db.collection('admins').doc(uid).delete();
         return res.status(200).json({ success: true });
       }
 
