@@ -86,6 +86,7 @@ td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:middle}
     <button class="tab" data-tab="notices" role="tab">Notice Board</button>
     <button class="tab" data-tab="academy" role="tab">Digital Academy</button>
     <button class="tab" data-tab="digilib" role="tab">DiGiLiB</button>
+    <button class="tab" data-tab="payment" role="tab">Payment Info</button>
     <button class="tab" data-tab="admins" role="tab">Admins</button>
   </div>
 
@@ -171,6 +172,18 @@ td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:middle}
     </div>
   </section>
 
+  <!-- PAYMENT INFO -->
+  <section class="panel" id="tab-payment">
+    <div class="card">
+      <div class="card-head">
+        <h2>Payment Instructions</h2>
+        <button class="btn sm" id="savePaymentBtn" type="button">Save Payment Info</button>
+      </div>
+      <p style="color:var(--muted);font-size:14px;margin-top:0">Shown to applicants when they click "Payment Instructions" on the payment page.</p>
+      <div id="paymentEditor"></div>
+    </div>
+  </section>
+
   <!-- 5. ADMINS -->
   <section class="panel" id="tab-admins">
     <div class="card">
@@ -206,7 +219,7 @@ const firebaseConfig = {
 const auth = getAuth(initializeApp(firebaseConfig));
 const gate = document.getElementById("gate");
 let currentUser = null;
-let state = { users: [], notices: [], internal: [], open: [], digilib: [], admins: [] };
+let state = { users: [], notices: [], internal: [], open: [], digilib: [], admins: [], payment: {} };
 let myUid = null;
 
 function toast(msg) {
@@ -482,6 +495,45 @@ document.getElementById("saveDigilibBtn").onclick = async (e) => {
   finally { e.target.disabled = false; }
 };
 
+/* ---------- Payment info ---------- */
+const PAY_METHODS = [["bkash", "bKash"], ["nagad", "Nagad"], ["rocket", "Rocket"]];
+
+function renderPayment() {
+  const wrap = document.getElementById("paymentEditor");
+  wrap.textContent = "";
+  PAY_METHODS.forEach(([key, label]) => {
+    const p = (state.payment[key] = state.payment[key] || {});
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.innerHTML = `
+      <input type="text" placeholder="${label} number (e.g. +8801XXXXXXXXX)" value="${esc(p.number || "")}">
+      <input type="text" placeholder="Account holder name" value="${esc(p.name || "")}">
+      <strong style="min-width:70px">${label}</strong>`;
+    const inp = row.querySelectorAll("input");
+    inp[0].oninput = (e) => (p.number = e.target.value);
+    inp[1].oninput = (e) => (p.name = e.target.value);
+    wrap.appendChild(row);
+  });
+  const c = (state.payment.cash = state.payment.cash || {});
+  const row = document.createElement("div");
+  row.className = "item-row";
+  row.style.gridTemplateColumns = "1fr auto";
+  row.innerHTML = `
+    <input type="text" placeholder="Booth location, or 'Not available right now'" value="${esc(c.text || "")}">
+    <strong style="min-width:70px">Cash</strong>`;
+  row.querySelector("input").oninput = (e) => (c.text = e.target.value);
+  wrap.appendChild(row);
+}
+
+document.getElementById("savePaymentBtn").onclick = async (e) => {
+  e.target.disabled = true;
+  try {
+    await api("POST", { action: "savePayment", ...state.payment });
+    toast("Payment info saved!");
+  } catch (err) { toast(err.message); }
+  finally { e.target.disabled = false; }
+};
+
 /* ---------- 5. Admins ---------- */
 function renderAdmins() {
   const tbody = document.getElementById("adminsBody");
@@ -555,6 +607,7 @@ async function loadAll() {
   state.open = (data.academy && data.academy.open) || [];
   state.digilib = data.digilib || [];
   state.admins = data.admins || [];
+  state.payment = data.payment || {};
   myUid = data.adminUid || null;
   state.internal.forEach((g) => { g.videos = g.videos || []; });
   state.open.forEach((g) => { g.videos = g.videos || []; });
@@ -566,6 +619,7 @@ async function loadAll() {
   renderAcademySection("openEditor", state.open);
   renderDigilibEditor();
   renderAdmins();
+  renderPayment();
 }
 
 document.getElementById("statusFilter").onchange = renderMembers;
