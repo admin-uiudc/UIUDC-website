@@ -86,6 +86,7 @@ td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:middle}
     <button class="tab" data-tab="notices" role="tab">Notice Board</button>
     <button class="tab" data-tab="academy" role="tab">Digital Academy</button>
     <button class="tab" data-tab="digilib" role="tab">DiGiLiB</button>
+    <button class="tab" data-tab="admins" role="tab">Admins</button>
   </div>
 
   <!-- 1. MEMBERSHIP REQUESTS -->
@@ -169,6 +170,24 @@ td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:middle}
       <div id="digilibEditor"></div>
     </div>
   </section>
+
+  <!-- 5. ADMINS -->
+  <section class="panel" id="tab-admins">
+    <div class="card">
+      <div class="card-head"><h2>Admin Access</h2></div>
+      <p style="color:var(--muted);font-size:14px;margin-top:0">The person must already have a registered account. Admins can approve members, edit all content and manage other admins.</p>
+      <div class="toolbar">
+        <input type="email" id="newAdminEmail" placeholder="Registered email address" style="min-width:300px">
+        <button class="btn" id="addAdminBtn" type="button">Add Admin</button>
+      </div>
+      <div class="tw">
+        <table style="min-width:480px">
+          <thead><tr><th>Admin</th><th>Added By</th><th>Action</th></tr></thead>
+          <tbody id="adminsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 </main>
 
 <div class="toast" id="toast"></div>
@@ -187,7 +206,8 @@ const firebaseConfig = {
 const auth = getAuth(initializeApp(firebaseConfig));
 const gate = document.getElementById("gate");
 let currentUser = null;
-let state = { users: [], notices: [], internal: [], open: [], digilib: [] };
+let state = { users: [], notices: [], internal: [], open: [], digilib: [], admins: [] };
+let myUid = null;
 
 function toast(msg) {
   const t = document.getElementById("toast");
@@ -462,6 +482,51 @@ document.getElementById("saveDigilibBtn").onclick = async (e) => {
   finally { e.target.disabled = false; }
 };
 
+/* ---------- 5. Admins ---------- */
+function renderAdmins() {
+  const tbody = document.getElementById("adminsBody");
+  tbody.textContent = "";
+  state.admins.forEach((a) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${esc(a.email || "(no email)")}</strong>${a.uid === myUid ? " <span class='pill verified'>You</span>" : ""}<br><span style="color:var(--muted);font-size:12px">${esc(a.uid)}</span></td>
+      <td>${esc(a.addedBy || "—")}</td>
+      <td></td>`;
+    if (a.uid !== myUid) {
+      const b = document.createElement("button");
+      b.className = "btn bad sm";
+      b.textContent = "Remove";
+      b.onclick = async () => {
+        if (!confirm("Remove admin access for " + (a.email || a.uid) + "?")) return;
+        b.disabled = true;
+        try {
+          await api("POST", { action: "removeAdmin", uid: a.uid });
+          state.admins = state.admins.filter((x) => x.uid !== a.uid);
+          renderAdmins();
+          toast("Admin removed.");
+        } catch (err) { toast(err.message); b.disabled = false; }
+      };
+      tr.lastElementChild.appendChild(b);
+    }
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById("addAdminBtn").onclick = async (e) => {
+  const input = document.getElementById("newAdminEmail");
+  const email = input.value.trim();
+  if (!email) return;
+  e.target.disabled = true;
+  try {
+    const r = await api("POST", { action: "addAdmin", email });
+    state.admins.push(r.admin);
+    input.value = "";
+    renderAdmins();
+    toast("Admin added.");
+  } catch (err) { toast(err.message); }
+  finally { e.target.disabled = false; }
+};
+
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -489,6 +554,8 @@ async function loadAll() {
   state.internal = (data.academy && data.academy.internal) || [];
   state.open = (data.academy && data.academy.open) || [];
   state.digilib = data.digilib || [];
+  state.admins = data.admins || [];
+  myUid = data.adminUid || null;
   state.internal.forEach((g) => { g.videos = g.videos || []; });
   state.open.forEach((g) => { g.videos = g.videos || []; });
   state.digilib.forEach((c) => { c.files = c.files || []; });
@@ -498,6 +565,7 @@ async function loadAll() {
   renderAcademySection("internalEditor", state.internal);
   renderAcademySection("openEditor", state.open);
   renderDigilibEditor();
+  renderAdmins();
 }
 
 document.getElementById("statusFilter").onchange = renderMembers;
