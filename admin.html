@@ -463,3 +463,66 @@ document.getElementById("saveDigilibBtn").onclick = async (e) => {
 };
 
 function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ---------- Boot: auth gate + initial load ---------- */
+function showGateError(msg, showLogin) {
+  gate.textContent = "";
+  const p = document.createElement("p");
+  p.textContent = msg;
+  p.style.cssText = "max-width:420px;margin:0;font-weight:600";
+  gate.appendChild(p);
+  if (showLogin) {
+    const a = document.createElement("a");
+    a.href = "LogIn.html";
+    a.className = "btn";
+    a.textContent = "Go to Log In";
+    gate.appendChild(a);
+  }
+}
+
+async function loadAll() {
+  const data = await api("GET");
+  state.users = data.users || [];
+  state.notices = data.notices || [];
+  state.internal = (data.academy && data.academy.internal) || [];
+  state.open = (data.academy && data.academy.open) || [];
+  state.digilib = data.digilib || [];
+  state.internal.forEach((g) => { g.videos = g.videos || []; });
+  state.open.forEach((g) => { g.videos = g.videos || []; });
+  state.digilib.forEach((c) => { c.files = c.files || []; });
+  document.getElementById("adminEmail").textContent = data.adminEmail || "Admin";
+  renderMembers();
+  renderNoticesEditor();
+  renderAcademySection("internalEditor", state.internal);
+  renderAcademySection("openEditor", state.open);
+  renderDigilibEditor();
+}
+
+document.getElementById("statusFilter").onchange = renderMembers;
+document.getElementById("searchInput").oninput = renderMembers;
+document.getElementById("refreshBtn").onclick = async (e) => {
+  e.target.disabled = true;
+  try { await loadAll(); toast("List refreshed."); }
+  catch (err) { toast(err.message); }
+  finally { e.target.disabled = false; }
+};
+document.getElementById("logoutBtn").onclick = async () => {
+  await signOut(auth);
+  location.href = "LogIn.html";
+};
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { location.replace("LogIn.html"); return; }
+  currentUser = user;
+  try {
+    await loadAll();
+    gate.remove();
+  } catch (err) {
+    showGateError(err.message || "Could not load the admin console.", false);
+  }
+});
+</script>
+</body>
+</html>
