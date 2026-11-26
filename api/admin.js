@@ -89,12 +89,13 @@ export default async function handler(req, res) {
 
     // 1. GET: Fetch all users, notices, academy, and digilib data
     if (req.method === 'GET') {
-      const [usersSnap, adminsSnap, noticesDoc, academyDoc, digilibDoc] = await Promise.all([
+      const [usersSnap, adminsSnap, noticesDoc, academyDoc, digilibDoc, paymentDoc] = await Promise.all([
         db.collection('users').get(),
         db.collection('admins').get(),
         db.collection('site_content').doc('notices').get(),
         db.collection('site_content').doc('academy').get(),
-        db.collection('site_content').doc('digilib').get()
+        db.collection('site_content').doc('digilib').get(),
+        db.collection('site_content').doc('payment').get()
       ]);
 
       const users = usersSnap.docs.map((d) => ({ uid: d.id, ...d.data() }));
@@ -116,7 +117,8 @@ export default async function handler(req, res) {
         admins,
         notices: noticesDoc.exists ? noticesDoc.data().items || [] : null,
         academy: academyDoc.exists ? academyDoc.data() : null,
-        digilib: digilibDoc.exists ? digilibDoc.data().categories || [] : null
+        digilib: digilibDoc.exists ? digilibDoc.data().categories || [] : null,
+        payment: paymentDoc.exists ? paymentDoc.data() : null
       });
     }
 
@@ -188,6 +190,21 @@ export default async function handler(req, res) {
         if (!Array.isArray(categories)) throw fail(400, 'Invalid library payload.');
         await db.collection('site_content').doc('digilib').set({
           categories,
+          updatedBy: adminUser.email || adminUser.uid,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === 'savePayment') {
+        const clip = (v, n) => String(v ?? '').trim().slice(0, n);
+        const b = req.body || {};
+        const acct = (o) => ({ number: clip(o?.number, 30), name: clip(o?.name, 80) });
+        await db.collection('site_content').doc('payment').set({
+          bkash: acct(b.bkash),
+          nagad: acct(b.nagad),
+          rocket: acct(b.rocket),
+          cash: { text: clip(b.cash?.text, 300) },
           updatedBy: adminUser.email || adminUser.uid,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
