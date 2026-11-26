@@ -119,6 +119,14 @@ main{max-width:760px}
 .msg{text-align:center;font-weight:600;margin-top:16px;display:none}
 .msg.bad{color:#c62828}.msg.good{color:#1b7a3a}
 .agree .err{margin-left:36px}
+/* Payment instructions: slide-down panel */
+#payment-instructions{color:var(--orange);font-weight:700;text-decoration:underline;cursor:pointer}
+.pi{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s ease;max-width:560px;margin:0 auto}
+.pi.open{grid-template-rows:1fr}
+.pi>.pi-in{overflow:hidden;min-height:0}
+.pi-box{margin:12px 0 4px;padding:18px 24px;border:2px solid var(--orange);border-radius:20px;background:rgba(238,238,238,.92);color:var(--ink);font-size:16px;font-weight:500;line-height:1.9;text-align:left}
+.pi-box div b{color:var(--orange)}
+@media(prefers-reduced-motion:reduce){.pi{transition:none}}
 </style>
 </head>
 <body>
@@ -134,8 +142,9 @@ main{max-width:760px}
   <p class="intro">Please enter the <b>Payment Method</b> and <b>Transaction ID</b> you used to pay your recruitment fee&hellip; For Cash option use the Application No in your Application Receipt. If you have not completed the payment yet, please click on payment instructions.</p>
 
   <p style="text-align:center; margin: 12px 0;">
-    <a href="#" id="payment-instructions">Payment Instructions</a>
+    <a href="#" id="payment-instructions" role="button" aria-expanded="false" aria-controls="piPanel">Payment Instructions</a>
   </p>
+  <div class="pi" id="piPanel"><div class="pi-in"><div class="pi-box" id="piBox" aria-live="polite"></div></div></div>
 
   <form id="f" novalidate>
     <fieldset class="field" id="methodSet">
@@ -194,6 +203,50 @@ main{max-width:760px}
   });
 
   const $ = (id) => document.getElementById(id);
+
+  /* ---- Payment instructions (edited by admins in admin.html) ---- */
+  const piLink = $('payment-instructions'), piPanel = $('piPanel'), piBox = $('piBox');
+  let piLoaded = false;
+
+  function renderInstructions(d) {
+    piBox.textContent = '';
+    const line = (label, text) => {
+      const div = document.createElement('div');
+      const b = document.createElement('b');
+      b.textContent = label + ': ';
+      div.appendChild(b);
+      div.appendChild(document.createTextNode(text));
+      piBox.appendChild(div);
+    };
+    [['bKash', 'bkash'], ['Nagad', 'nagad'], ['Rocket', 'rocket']].forEach(([label, key]) => {
+      const a = (d && d[key]) || {};
+      line(label, a.number ? a.number + (a.name ? ' (' + a.name + ')' : '') : 'Not available right now');
+    });
+    line('Cash', (d && d.cash && d.cash.text) || 'Not available right now');
+  }
+
+  async function loadInstructions() {
+    piBox.textContent = 'Loading\u2026';
+    try {
+      while (!currentUser) await new Promise((r) => setTimeout(r, 150));
+      const res = await fetch('/api/payment-info', { headers: { Authorization: 'Bearer ' + await currentUser.getIdToken() } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      renderInstructions(data);
+      piLoaded = true;
+    } catch (e) {
+      piBox.textContent = 'Could not load payment instructions. Please close and try again.';
+    }
+  }
+
+  piLink.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    const open = !piPanel.classList.contains('open');
+    piPanel.classList.toggle('open', open);
+    piLink.setAttribute('aria-expanded', String(open));
+    if (open && !piLoaded) loadInstructions();
+  });
+
   const trx = $('trx');
   const label = $('trxLabel');
 
